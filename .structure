@@ -1,0 +1,87 @@
+api-projeto/
+├── src/
+│   ├── config/
+│   │   ├── app.ts                   // Configuração do Express e middlewares
+│   │   ├── database.ts              // Configuração do Prisma para conexão com o MySQL
+│   │   ├── redis.ts                 // Configuração do cliente do Redis
+│   │   ├── logger.ts                // Configuração do Morgan para logs
+│   │   └── environment.ts           // Carregamento das variáveis de ambiente
+│   │
+│   ├── modules/                     // Módulos da aplicação
+│   │   ├── auth/                    
+│   │   │   ├── controllers/         // Controladores do módulo de autenticação
+│   │   │   ├── services/            // Lógica de negócio do módulo de autenticação
+│   │   │   ├── repositories/        // Acesso ao banco de dados (via Prisma)
+│   │   │   ├── dto/                 // Data Transfer Objects
+│   │   │   ├── validators/          // Validação das entradas (ex.: Joi ou Yup)
+│   │   │   ├── middleware/          // Middlewares específicos do módulo
+│   │   │   └── routes.ts            // Definição das rotas de autenticação
+│   │   │
+│   │   ├── users/                   // Módulo de usuários
+│   │   │   ├── controllers/
+│   │   │   ├── services/
+│   │   │   ├── repositories/
+│   │   │   ├── dto/
+│   │   │   ├── validators/
+│   │   │   └── routes.ts
+│   │   │
+│   │   ├── courses/                 // Módulo de cursos
+│   │   │   ├── controllers/
+│   │   │   ├── services/
+│   │   │   ├── repositories/
+│   │   │   ├── dto/
+│   │   │   ├── validators/
+│   │   │   └── routes.ts
+│   │   │
+│   │   └── jobs/                    // Módulo de vagas
+│   │       ├── controllers/
+│   │       ├── services/
+│   │       ├── repositories/
+│   │       ├── dto/
+│   │       ├── validators/
+│   │       └── routes.ts
+│   │
+│   ├── shared/                      // Código compartilhado entre os módulos
+│   │   ├── errors/                  // Classes de erro customizadas e tratamento de erros
+│   │   │   ├── AppError.ts
+│   │   │   └── ErrorHandler.ts
+│   │   │
+│   │   ├── middleware/              // Middlewares globais da aplicação
+│   │   │   ├── auth.middleware.ts
+│   │   │   ├── error.middleware.ts
+│   │   │   ├── rate-limiter.ts
+│   │   │   └── validate.middleware.ts
+│   │   │
+│   │   ├── utils/                   // Funções utilitárias (JWT, hash, paginação, datas)
+│   │   │   ├── jwt.utils.ts
+│   │   │   ├── hash.utils.ts
+│   │   │   ├── pagination.utils.ts
+│   │   │   └── date.utils.ts
+│   │   │
+│   │   └── types/                   // Tipos e interfaces compartilhados
+│   │       ├── express.d.ts
+│   │       └── index.ts
+│   │
+│   ├── routes/                      // Agregador de todas as rotas da aplicação
+│   │   └── index.ts
+│   │
+│   └── server.ts                    // Ponto de entrada da aplicação
+│
+├── prisma/                          // Arquivos do Prisma
+│   ├── schema.prisma                // Schema do banco de dados
+│   └── migrations/                  // Migrações geradas
+│
+├── logs/                            // Diretório para armazenar os arquivos de log
+│
+├── tests/                           // Testes (unitários, integração, e2e)
+│   ├── unit/
+│   ├── integration/
+│   └── e2e/
+│
+├── .env                             // Variáveis de ambiente (não versionar)
+├── .env.example                     // Exemplo das variáveis de ambiente
+├── .gitignore                       // Arquivos e pastas a serem ignorados pelo Git
+├── tsconfig.json                    // Configuração do TypeScript
+├── package.json                     // Dependências e scripts do projeto
+├── jest.config.js                   // Configuração do Jest para testes
+└── README.md                        // Documentação do projeto

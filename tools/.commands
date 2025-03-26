@@ -1,0 +1,8 @@
+# Ver todos os logs de erro
+node tools/logs-analyzer.js --file error.log
+
+# Ver logs de auditoria para um usuário específico
+node tools/logs-analyzer.js --file audit.log --user <id-do-usuario>
+
+# Ver estatísticas dos logs de acesso
+node tools/logs-analyzer.js --file access.log --stats

@@ -1,0 +1,120 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// Definição dos modelos para o banco central (Auth DB)
+
+// Modelo de Tenant (Cliente)
+model Tenant {
+  id           String       @id @default(uuid())
+  name         String
+  subdomain    String       @unique
+  status       TenantStatus @default(ACTIVE)
+  planId       String
+  plan         Plan         @relation(fields: [planId], references: [id])
+  createdAt    DateTime     @default(now()) @map("created_at")
+  updatedAt    DateTime     @updatedAt @map("updated_at")
+  userTenants  UserTenant[]
+
+  @@map("tenants")
+}
+
+// Status possíveis para um tenant
+enum TenantStatus {
+  ACTIVE
+  SUSPENDED
+  INACTIVE
+  TRIAL
+}
+
+// Modelo de Usuário
+model User {
+  id            String       @id @default(uuid())
+  email         String       @unique
+  firstName     String       @map("first_name")
+  lastName      String       @map("last_name")
+  passwordHash  String       @map("password_hash")
+  status        UserStatus   @default(ACTIVE)
+  lastLogin     DateTime?    @map("last_login")
+  createdAt     DateTime     @default(now()) @map("created_at")
+  updatedAt     DateTime     @updatedAt @map("updated_at")
+  userTenants   UserTenant[]
+  userSessions  UserSession[]
+
+  @@map("users")
+}
+
+// Status possíveis para um usuário
+enum UserStatus {
+  ACTIVE
+  INACTIVE
+  BLOCKED
+}
+
+// Modelo de associação entre Usuários e Tenants
+model UserTenant {
+  id        String   @id @default(uuid())
+  userId    String   @map("user_id")
+  tenantId  String   @map("tenant_id")
+  roleId    String   @map("role_id")
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  tenant    Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  role      Role     @relation(fields: [roleId], references: [id])
+
+  @@unique([userId, tenantId])
+  @@map("user_tenants")
+}
+
+// Modelo de Sessão de Usuário
+model UserSession {
+  id          String    @id @default(uuid())
+  userId      String    @map("user_id")
+  tokenHash   String    @map("token_hash")
+  expiresAt   DateTime  @map("expires_at")
+  ipAddress   String?   @map("ip_address")
+  deviceInfo  String?   @map("device_info")
+  createdAt   DateTime  @default(now()) @map("created_at")
+  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("user_sessions")
+}
+
+// Modelo de Papéis (Roles)
+model Role {
+  id            String       @id @default(uuid())
+  name          String
+  description   String?
+  isSystemRole  Boolean      @default(false) @map("is_system_role")
+  permissions   Json?
+  createdAt     DateTime     @default(now()) @map("created_at")
+  updatedAt     DateTime     @updatedAt @map("updated_at")
+  userTenants   UserTenant[]
+
+  @@map("roles")
+}
+
+// Modelo de Planos
+model Plan {
+  id                String    @id @default(uuid())
+  name              String
+  maxProjects       Int       @map("max_projects")
+  maxUsers          Int       @map("max_users")
+  maxBeneficiaries  Int       @map("max_beneficiaries")
+  availableModules  Json      @map("available_modules")
+  price             Decimal   @db.Decimal(10, 2)
+  createdAt         DateTime  @default(now()) @map("created_at")
+  updatedAt         DateTime  @updatedAt @map("updated_at")
+  tenants           Tenant[]
+
+  @@map("plans")
+}

@@ -6,11 +6,12 @@ import {
 } from '@nestjs/common';
 import { Observable } from 'rxjs';
 import { map } from 'rxjs/operators';
+import { Response as ExpressResponse } from 'express';
 
 /**
  * Interface para resposta padronizada da API
  */
-export interface Response<T> {
+export interface ApiResponse<T> {
   data: T;
   meta?: Record<string, unknown>;
   timestamp: string;
@@ -32,18 +33,18 @@ interface SpecialCaseHeader {
  */
 @Injectable()
 export class TransformInterceptor<T>
-  implements NestInterceptor<T, Response<T> | T>
+  implements NestInterceptor<T, ApiResponse<T> | T>
 {
   intercept(
     context: ExecutionContext,
-    next: CallHandler,
-  ): Observable<Response<T> | T> {
+    next: CallHandler<T>,
+  ): Observable<ApiResponse<T> | T> {
     // Verifica se é uma resposta HTTP
     if (context.getType() !== 'http') {
       return next.handle();
     }
 
-    const response = context.switchToHttp().getResponse();
+    const response = context.switchToHttp().getResponse<ExpressResponse>();
 
     // Verifica cabeçalhos para identificar casos especiais
     const specialCases: SpecialCaseHeader[] = [
@@ -58,7 +59,7 @@ export class TransformInterceptor<T>
         headerValue &&
         (value
           ? typeof headerValue === 'string' && headerValue.includes(value)
-          : check && check(headerValue as string))
+          : check && typeof headerValue === 'string' && check(headerValue))
       ) {
         return next.handle();
       }
@@ -66,12 +67,11 @@ export class TransformInterceptor<T>
 
     // Transforma a resposta no formato padronizado
     return next.handle().pipe(
-      map((data: T | Response<T>) => {
+      map((data: T | ApiResponse<T>) => {
         // Verifica se já está no formato padronizado
         if (
-          data &&
-          typeof data === 'object' &&
           data !== null &&
+          typeof data === 'object' &&
           'data' in data &&
           'success' in data &&
           'timestamp' in data
@@ -84,7 +84,7 @@ export class TransformInterceptor<T>
           data,
           timestamp: new Date().toISOString(),
           success: true,
-        } as Response<T>;
+        } as ApiResponse<T>;
       }),
     );
   }

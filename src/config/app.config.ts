@@ -1,8 +1,5 @@
 import { validateEnv } from './env.validation';
 
-/**
- * Configuração completa da aplicação
- */
 export function appConfig() {
   // Valida as variáveis de ambiente
   const env = validateEnv(process.env);

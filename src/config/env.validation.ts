@@ -1,8 +1,5 @@
 import { z } from 'zod';
 
-/**
- * Schema de validação para variáveis de ambiente
- */
 export const envSchema = z.object({
   // Database
   DATABASE_URL: z.string().url('DATABASE_URL deve ser uma URL válida'),

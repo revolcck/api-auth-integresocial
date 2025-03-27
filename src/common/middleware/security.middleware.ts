@@ -1,6 +1,7 @@
 import { INestApplication } from '@nestjs/common';
-import * as helmet from 'helmet';
-import * as cookieParser from 'cookie-parser';
+import helmet from 'helmet';
+import cookieParser from 'cookie-parser';
+import { Request, Response, NextFunction } from 'express';
 import { appConfig } from '../../config';
 
 /**
@@ -11,37 +12,11 @@ export function setupSecurityMiddleware(app: INestApplication): void {
   const config = appConfig();
 
   // Helmet para proteção de cabeçalhos HTTP
-  app.use(
-    helmet({
-      // Configurações específicas do Helmet
-      contentSecurityPolicy: {
-        directives: {
-          defaultSrc: ["'self'"],
-          scriptSrc: ["'self'", "'unsafe-inline'", "'unsafe-eval'"],
-          styleSrc: ["'self'", "'unsafe-inline'"],
-          imgSrc: ["'self'", 'data:', 'https:'],
-          fontSrc: ["'self'", 'https:', 'data:'],
-          connectSrc: ["'self'"],
-        },
-      },
-      // Melhora a proteção contra clickjacking
-      frameguard: {
-        action: 'deny',
-      },
-      // Evita que o navegador MIME-sniffing uma resposta para outro tipo de conteúdo
-      noSniff: true,
-      // Habilita o modo estrito para as cookies
-      hsts: {
-        maxAge: 63072000, // 2 anos
-        includeSubDomains: true,
-        preload: true,
-      },
-    }),
-  );
+  app.use(helmet());
 
   // CORS configurado com base no ambiente
   app.enableCors({
-    origin: config.isProduction
+    origin: config.app.isProduction
       ? [/\.integresocial\.cloud$/] // Apenas domínios do integresocial.cloud em produção
       : true, // Qualquer origem em desenvolvimento
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH'],
@@ -51,18 +26,18 @@ export function setupSecurityMiddleware(app: INestApplication): void {
   });
 
   // Parser de cookies com assinatura
+  // Usando importação ES Modules com tipo correto
   app.use(cookieParser(config.security.jwtSecret.substring(0, 32)));
 
   // Rate limiting simples
-  // Em produção, considere usar um módulo como o nest-rate-limiter ou @nestjs/throttler
-  if (config.isProduction) {
+  if (config.app.isProduction) {
     const requestCounts = new Map<
       string,
       { count: number; resetTime: number }
     >();
 
-    app.use((req, res, next) => {
-      const clientIP = req.ip;
+    app.use((req: Request, res: Response, next: NextFunction) => {
+      const clientIP = req.ip || '0.0.0.0';
       const now = Date.now();
       const resetTime = now + 60 * 1000; // 1 minuto
 

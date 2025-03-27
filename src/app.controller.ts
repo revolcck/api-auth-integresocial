@@ -1,8 +1,5 @@
 import { Controller, Get } from '@nestjs/common';
 
-/**
- * Controlador principal com endpoints básicos de saúde da aplicação
- */
 @Controller()
 export class AppController {
   /**

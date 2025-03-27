@@ -14,6 +14,7 @@ import { LoggerService } from '../logger/logger.service';
  */
 interface ExtendedRequest extends Request {
   tenantId?: string;
+  body: Record<string, unknown>; // Definimos que o body é um objeto de strings para unknown
 }
 
 /**
@@ -32,7 +33,9 @@ export class LoggingInterceptor implements NestInterceptor {
     }
 
     const request = context.switchToHttp().getRequest<ExtendedRequest>();
-    const { method, originalUrl, ip, body } = request;
+    const { method, originalUrl, ip } = request;
+    // Extraímos o corpo da requisição de forma segura
+    const body = request.body;
     const userAgent = request.get('user-agent') || 'unknown';
 
     // Obter ID do tenant (se disponível no futuro)
@@ -55,7 +58,7 @@ export class LoggingInterceptor implements NestInterceptor {
         next: (data: unknown) => {
           this.logResponse(context, startTime, data);
         },
-        error: (error: Error) => {
+        error: () => {
           const response = context.switchToHttp().getResponse<Response>();
           this.logger.http(
             `[Response] ${method} ${originalUrl} - ${response.statusCode} - ${Date.now() - startTime}ms`,
@@ -102,12 +105,12 @@ export class LoggingInterceptor implements NestInterceptor {
   /**
    * Remove dados sensíveis do corpo da requisição
    */
-  private sanitizeBody(body: unknown): Record<string, unknown> {
+  private sanitizeBody(body: Record<string, unknown>): Record<string, unknown> {
     if (!body || typeof body !== 'object' || body === null) {
       return {};
     }
 
-    const sanitized = { ...(body as Record<string, unknown>) };
+    const sanitized = { ...body };
 
     // Lista de campos sensíveis para remover ou mascarar
     const sensitiveFields = [

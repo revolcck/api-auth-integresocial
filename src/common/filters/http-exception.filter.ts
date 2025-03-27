@@ -95,13 +95,14 @@ export class HttpExceptionFilter implements ExceptionFilter {
       ? message.join(', ')
       : message;
 
-    if (statusCode >= 500) {
+    // Usando comparações seguras com o enum HttpStatus
+    if (statusCode >= HttpStatus.INTERNAL_SERVER_ERROR) {
       this.logger.error(
         `${request.method} ${request.url} - ${statusCode} - ${formattedMessage}`,
         exception.stack,
         'HttpException',
       );
-    } else if (statusCode >= 400) {
+    } else if (statusCode >= HttpStatus.BAD_REQUEST) {
       this.logger.warn(
         `${request.method} ${request.url} - ${statusCode} - ${formattedMessage}`,
         'HttpException',

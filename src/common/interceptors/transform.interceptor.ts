@@ -12,9 +12,18 @@ import { map } from 'rxjs/operators';
  */
 export interface Response<T> {
   data: T;
-  meta?: Record<string, any>;
+  meta?: Record<string, unknown>;
   timestamp: string;
   success: boolean;
+}
+
+/**
+ * Tipo para verificação de cabeçalhos especiais
+ */
+interface SpecialCaseHeader {
+  header: string;
+  value?: string;
+  check?: (val: string) => boolean;
 }
 
 /**
@@ -23,12 +32,12 @@ export interface Response<T> {
  */
 @Injectable()
 export class TransformInterceptor<T>
-  implements NestInterceptor<T, Response<T>>
+  implements NestInterceptor<T, Response<T> | T>
 {
   intercept(
     context: ExecutionContext,
     next: CallHandler,
-  ): Observable<Response<T>> {
+  ): Observable<Response<T> | T> {
     // Verifica se é uma resposta HTTP
     if (context.getType() !== 'http') {
       return next.handle();
@@ -37,7 +46,7 @@ export class TransformInterceptor<T>
     const response = context.switchToHttp().getResponse();
 
     // Verifica cabeçalhos para identificar casos especiais
-    const specialCases = [
+    const specialCases: SpecialCaseHeader[] = [
       { header: 'Content-Disposition', value: 'attachment' },
       { header: 'Location', check: (val: string) => !!val },
     ];
@@ -47,19 +56,22 @@ export class TransformInterceptor<T>
       const headerValue = response.getHeader(header);
       if (
         headerValue &&
-        (value ? headerValue.includes(value) : check?.(headerValue))
+        (value
+          ? typeof headerValue === 'string' && headerValue.includes(value)
+          : check && check(headerValue as string))
       ) {
-        return next.handle() as any;
+        return next.handle();
       }
     }
 
     // Transforma a resposta no formato padronizado
     return next.handle().pipe(
-      map((data) => {
+      map((data: T | Response<T>) => {
         // Verifica se já está no formato padronizado
         if (
           data &&
           typeof data === 'object' &&
+          data !== null &&
           'data' in data &&
           'success' in data &&
           'timestamp' in data
@@ -72,7 +84,7 @@ export class TransformInterceptor<T>
           data,
           timestamp: new Date().toISOString(),
           success: true,
-        };
+        } as Response<T>;
       }),
     );
   }

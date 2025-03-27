@@ -1,6 +1,11 @@
 import { PipeTransform, Injectable, BadRequestException } from '@nestjs/common';
-import { ZodSchema } from 'zod';
+import { ZodSchema, ZodError } from 'zod';
 import { fromZodError } from 'zod-validation-error';
+
+interface ValidationErrorDetail {
+  field: string;
+  message: string;
+}
 
 /**
  * Pipe de validação usando Zod
@@ -10,20 +15,28 @@ import { fromZodError } from 'zod-validation-error';
 export class ZodValidationPipe implements PipeTransform {
   constructor(private schema: ZodSchema) {}
 
-  transform(value: unknown) {
+  transform(value: unknown): unknown {
     try {
       return this.schema.parse(value);
     } catch (error) {
       // Usa zod-validation-error para formatar mensagens de erro
-      const validationError = fromZodError(error);
+      if (error instanceof ZodError) {
+        const validationError = fromZodError(error);
 
-      throw new BadRequestException({
-        message: validationError.message,
-        errors: validationError.details.map((detail) => ({
-          field: detail.path.join('.'),
-          message: detail.message,
-        })),
-      });
+        const details: ValidationErrorDetail[] = validationError.details.map(
+          (detail) => ({
+            field: detail.path.join('.'),
+            message: detail.message,
+          }),
+        );
+
+        throw new BadRequestException({
+          message: validationError.message,
+          errors: details,
+        });
+      }
+
+      throw error;
     }
   }
 }
@@ -33,6 +46,8 @@ export class ZodValidationPipe implements PipeTransform {
  * @param schema Schema Zod para validação
  * @returns Instância do ZodValidationPipe
  */
-export function ZodValidation<T extends ZodSchema>(schema: T) {
+export function ZodValidation<T extends ZodSchema>(
+  schema: T,
+): ZodValidationPipe {
   return new ZodValidationPipe(schema);
 }

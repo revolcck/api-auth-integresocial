@@ -22,6 +22,16 @@ interface ErrorResponse {
 }
 
 /**
+ * Interface para resposta de exceção
+ */
+interface ExceptionResponseObject {
+  message?: string | string[];
+  error?: string;
+  statusCode?: number;
+  [key: string]: unknown;
+}
+
+/**
  * Filtro global para tratar exceções HTTP
  * Formata as respostas de erro de forma padronizada e realiza o log
  */
@@ -32,7 +42,7 @@ export class HttpExceptionFilter implements ExceptionFilter {
     this.logger.setContext('ExceptionFilter');
   }
 
-  catch(exception: Error, host: ArgumentsHost) {
+  catch(exception: Error, host: ArgumentsHost): void {
     const ctx = host.switchToHttp();
     const response = ctx.getResponse<Response>();
     const request = ctx.getRequest<Request>();
@@ -48,9 +58,18 @@ export class HttpExceptionFilter implements ExceptionFilter {
       const exceptionResponse = exception.getResponse();
 
       if (typeof exceptionResponse === 'object' && exceptionResponse !== null) {
-        const exceptionObj = exceptionResponse as Record<string, any>;
-        message = exceptionObj.message || message;
-        error = exceptionObj.error || error;
+        const exceptionObj = exceptionResponse as ExceptionResponseObject;
+
+        if (exceptionObj.message !== undefined) {
+          message = exceptionObj.message;
+        }
+
+        if (
+          exceptionObj.error !== undefined &&
+          typeof exceptionObj.error === 'string'
+        ) {
+          error = exceptionObj.error;
+        }
       } else if (typeof exceptionResponse === 'string') {
         message = exceptionResponse;
       }
@@ -72,15 +91,19 @@ export class HttpExceptionFilter implements ExceptionFilter {
     }
 
     // Log do erro com diferentes níveis baseado no status code
+    const formattedMessage = Array.isArray(message)
+      ? message.join(', ')
+      : message;
+
     if (statusCode >= 500) {
       this.logger.error(
-        `${request.method} ${request.url} - ${statusCode} - ${message}`,
+        `${request.method} ${request.url} - ${statusCode} - ${formattedMessage}`,
         exception.stack,
         'HttpException',
       );
     } else if (statusCode >= 400) {
       this.logger.warn(
-        `${request.method} ${request.url} - ${statusCode} - ${message}`,
+        `${request.method} ${request.url} - ${statusCode} - ${formattedMessage}`,
         'HttpException',
       );
     }

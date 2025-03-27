@@ -1,5 +1,5 @@
 import { NestFactory } from '@nestjs/core';
-import { Logger, ValidationPipe } from '@nestjs/common';
+import { ValidationPipe } from '@nestjs/common';
 import { AppModule } from './app.module';
 import { appConfig } from './config/app.config';
 import { LoggerService } from './common/logger/logger.service';
@@ -58,7 +58,8 @@ async function bootstrap() {
  * Iniciar aplicação com tratamento de erro
  */
 bootstrap().catch((err) => {
-  const logger = new Logger('Bootstrap');
-  logger.error(`❌ Erro ao iniciar o servidor: ${err.message}`, err.stack);
+  // Usar logger nativo do NestJS para o caso de erro durante o bootstrap
+  // pois nosso LoggerService pode não estar disponível
+  console.error(`❌ Erro ao iniciar o servidor: ${err.message}`, err.stack);
   process.exit(1);
 });

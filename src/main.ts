@@ -1,23 +1,41 @@
 import { NestFactory } from '@nestjs/core';
-import { Logger } from '@nestjs/common';
+import { Logger, ValidationPipe } from '@nestjs/common';
 import { AppModule } from './app.module';
-import * as helmet from 'helmet';
-import * as cookieParser from 'cookie-parser';
 import { appConfig } from './config/app.config';
+import { LoggerService } from './common/logger/logger.service';
+import { setupSecurityMiddleware } from './common/middleware/security.middleware';
 
+/**
+ * Função principal para bootstrap da aplicação
+ */
 async function bootstrap() {
-  const app = await NestFactory.create(AppModule);
-  const config = appConfig();
-  const logger = new Logger('Bootstrap');
-
-  // Middlewares de segurança
-  app.use(helmet());
-  app.enableCors({
-    origin: true, // Em produção, configure origens específicas
-    methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH'],
-    credentials: true,
+  // Criar instância da aplicação
+  const app = await NestFactory.create(AppModule, {
+    bufferLogs: true,
   });
-  app.use(cookieParser());
+
+  // Obter configurações da aplicação
+  const config = appConfig();
+
+  // Configurar logger personalizado
+  const logger = app.get(LoggerService);
+  logger.setContext('Bootstrap');
+  app.useLogger(logger);
+
+  // Configurar middlewares de segurança
+  setupSecurityMiddleware(app);
+
+  // Configurar validação global
+  app.useGlobalPipes(
+    new ValidationPipe({
+      whitelist: true,
+      transform: true,
+      forbidNonWhitelisted: true,
+      transformOptions: {
+        enableImplicitConversion: false,
+      },
+    }),
+  );
 
   // Prefixo global de API
   app.setGlobalPrefix('api');
@@ -33,8 +51,12 @@ async function bootstrap() {
     `🚀 Servidor iniciado na porta ${port} em ambiente ${config.app.environment}`,
   );
   logger.log(`🔐 Sistema de autenticação do Integre Social está rodando!`);
+  logger.log(`🌐 URL da aplicação: ${await app.getUrl()}`);
 }
 
+/**
+ * Iniciar aplicação com tratamento de erro
+ */
 bootstrap().catch((err) => {
   const logger = new Logger('Bootstrap');
   logger.error(`❌ Erro ao iniciar o servidor: ${err.message}`, err.stack);

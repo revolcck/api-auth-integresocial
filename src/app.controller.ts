@@ -1,10 +1,15 @@
 import { Controller, Get } from '@nestjs/common';
-import { Public } from './auth/decorators/public.decorator';
 
+/**
+ * Controlador principal com endpoints básicos de saúde da aplicação
+ */
 @Controller()
 export class AppController {
-  @Public()
-  @Get()
+  /**
+   * Endpoint de health check
+   * Não requer autenticação
+   */
+  @Get('health')
   healthCheck() {
     return {
       status: 'ok',
@@ -13,7 +18,10 @@ export class AppController {
     };
   }
 
-  @Public()
+  /**
+   * Endpoint de versão
+   * Não requer autenticação
+   */
   @Get('version')
   getVersion() {
     return {

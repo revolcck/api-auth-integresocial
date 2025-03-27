@@ -1,0 +1,47 @@
+/**
+ * 
+ * src/
+ * ├── app.controller.ts
+ * ├── app.module.ts
+ * ├── main.ts
+ * ├── common/
+ * │   └── pipes/
+ * │       └── zod-validation.pipe.ts
+ * ├── config/
+ * │   ├── app.config.ts
+ * │   └── jwt.config.ts
+ * ├── prisma/
+ * │   ├── prisma.module.ts
+ * │   └── prisma.service.ts
+ * ├── auth/
+ * │   ├── auth.module.ts
+ * │   ├── controllers/
+ * │   │   └── auth.controller.ts
+ * │   ├── decorators/
+ * │   │   └── public.decorator.ts
+ * │   ├── dto/
+ * │   │   └── index.ts
+ * │   ├── guards/
+ * │   │   ├── jwt-auth.guard.ts
+ * │   │   └── tenant-auth.guard.ts
+ * │   ├── services/
+ * │   │   └── auth.service.ts
+ * │   └── strategies/
+ * │       └── jwt.strategy.ts
+ * ├── users/
+ * │   ├── users.module.ts
+ * │   ├── controllers/
+ * │   │   └── users.controller.ts
+ * │   ├── dto/
+ * │   │   └── index.ts
+ * │   └── services/
+ * │       └── users.service.ts
+ * └── tenants/
+ *     ├── tenants.module.ts
+ *     ├── controllers/
+ *     │   └── tenants.controller.ts
+ *     ├── dto/
+ *     │   └── index.ts
+ *     └── services/
+ *         └── tenants.service.ts
+ */

@@ -1,5 +1,4 @@
 import { NestFactory } from '@nestjs/core';
-import { ValidationPipe } from '@nestjs/common';
 import { AppModule } from './app.module';
 import { appConfig } from './config/app.config';
 import { LoggerService } from './common/logger/logger.service';
@@ -17,25 +16,13 @@ async function bootstrap() {
   // Obter configurações da aplicação
   const config = appConfig();
 
-  // Configurar logger personalizado
-  const logger = app.get(LoggerService);
+  // Configurar logger personalizado com resolve() ao invés de get()
+  const logger = await app.resolve(LoggerService);
   logger.setContext('Bootstrap');
   app.useLogger(logger);
 
   // Configurar middlewares de segurança
   setupSecurityMiddleware(app);
-
-  // Configurar validação global
-  app.useGlobalPipes(
-    new ValidationPipe({
-      whitelist: true,
-      transform: true,
-      forbidNonWhitelisted: true,
-      transformOptions: {
-        enableImplicitConversion: false,
-      },
-    }),
-  );
 
   // Prefixo global de API
   app.setGlobalPrefix('api');
@@ -57,7 +44,7 @@ async function bootstrap() {
 /**
  * Iniciar aplicação com tratamento de erro
  */
-bootstrap().catch((err) => {
+bootstrap().catch((err: Error) => {
   // Usar logger nativo do NestJS para o caso de erro durante o bootstrap
   // pois nosso LoggerService pode não estar disponível
   console.error(`❌ Erro ao iniciar o servidor: ${err.message}`, err.stack);

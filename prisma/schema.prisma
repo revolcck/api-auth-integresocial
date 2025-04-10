@@ -1,6 +1,4 @@
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
-
+// schema.prisma
 generator client {
   provider = "prisma-client-js"
 }
@@ -10,111 +8,280 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-// Definição dos modelos para o banco central (Auth DB)
+// Enums
+enum TipoPessoa {
+  FISICA
+  JURIDICA
+}
 
-// Modelo de Tenant (Cliente)
+enum StatusCliente {
+  ATIVO
+  INATIVO
+  BLOQUEADO
+  INADIMPLENTE
+}
+
+enum StatusTenant {
+  ATIVO
+  INATIVO
+  PENDENTE_CONFIGURACAO
+  BLOQUEADO_PAGAMENTO
+  GRAUITO
+}
+
+enum FormaPagamento {
+  CARTAO_CREDITO
+  CARTAO_DEBITO
+  BOLETO
+  PIX
+  TRANSFERENCIA
+}
+
+enum StatusPagamento {
+  PAGO
+  PENDENTE
+  CANCELADO
+  FALHA
+  REEMBOLSADO
+}
+
+enum TipoPlano {
+  PLANO_GRATUITO
+  PLANO_INICIANTE
+  PLANO_ESSENCIAL
+  PLANO_EMPRESARIAL
+  PLANO_PREMIUM
+}
+
+enum StatusNotaFiscal {
+  EMITIDA
+  CANCELADA
+  PENDENTE
+}
+
+enum Status {
+  ATIVO
+  INATIVO
+}
+
+// Modelos
+model Cliente {
+  id                String         @id @default(uuid())
+  nome              String
+  email             String         @unique
+  telefone          String
+  tipoPessoa        TipoPessoa
+  cpfCnpj           String         @unique
+  status            StatusCliente  @default(ATIVO)
+  dataCadastro      DateTime       @default(now())
+  dataAtualizacao   DateTime       @updatedAt
+  ultimoAcesso      DateTime?
+
+  // Campos específicos para pessoa jurídica
+  razaoSocial       String?
+  inscricaoEstadual String?
+  nomeResponsavel   String?
+  emailResponsavel  String?
+  telefResponsavel  String?
+
+  // Relacionamentos
+  enderecos         Endereco[]
+  pagamentos        Pagamento[]
+  tenant            Tenant?
+  clientePlano      ClientePlano[]
+
+  @@map("clientes")
+}
+
+model Endereco {
+  id              String   @id @default(uuid())
+  clienteId       String
+  logradouro      String
+  numero          String
+  complemento     String?
+  bairro          String
+  cidade          String
+  estado          String
+  cep             String
+  isPrincipal     Boolean  @default(false)
+  dataCadastro    DateTime @default(now())
+  dataAtualizacao DateTime @updatedAt
+
+  // Relacionamentos
+  cliente         Cliente  @relation(fields: [clienteId], references: [id], onDelete: Cascade)
+
+  @@map("enderecos")
+}
+
+model Plano {
+  id                 String         @id @default(uuid())
+  nome               String
+  tipo               TipoPlano
+  descricao          String?
+  limiteProjetos     Int
+  limiteBeneficiarios Int
+  modulosIncluidos   Json           // Array de strings ["Atendimento", "Cadastro", etc]
+  valorMensal        Decimal        @db.Decimal(10, 2)
+  valorAnual         Decimal?       @db.Decimal(10, 2)
+  status             Status         @default(ATIVO)
+  dataCadastro       DateTime       @default(now())
+  dataAtualizacao    DateTime       @updatedAt
+
+  // Relacionamentos
+  clientePlanos      ClientePlano[]
+  historicosPlanos   HistoricoPlano[]
+
+  @@map("planos")
+}
+
+model ClientePlano {
+  id                String         @id @default(uuid())
+  clienteId         String
+  planoId           String
+  dataInicio        DateTime       @default(now())
+  dataFim           DateTime?
+  status            Status        @default(ATIVO)
+  valorContratado   Decimal        @db.Decimal(10, 2)
+  cicloCobranca     String         // "MENSAL" ou "ANUAL"
+  dataCadastro      DateTime       @default(now())
+  dataAtualizacao   DateTime       @updatedAt
+  
+  // Relacionamentos
+  cliente           Cliente        @relation(fields: [clienteId], references: [id], onDelete: Cascade)
+  plano             Plano          @relation(fields: [planoId], references: [id])
+  pagamentos        Pagamento[]
+  tenant            Tenant?
+
+  @@map("cliente_planos")
+}
+
+model HistoricoPlano {
+  id                String         @id @default(uuid())
+  clienteId         String
+  planoId           String
+  planoAnteriorId   String?
+  tipoMudanca       String         // "UPGRADE", "DOWNGRADE", "NOVO", "CANCELAMENTO"
+  observacao        String?
+  dataMudanca       DateTime       @default(now())
+  usuarioResponsavel String        // ID ou nome do usuário que fez a mudança
+
+  // Relacionamentos
+  plano             Plano          @relation(fields: [planoId], references: [id])
+
+  @@map("historicos_planos")
+}
+
+model Pagamento {
+  id                String          @id @default(uuid())
+  clienteId         String
+  clientePlanoId    String
+  valor             Decimal         @db.Decimal(10, 2)
+  formaPagamento    FormaPagamento
+  status            StatusPagamento @default(PENDENTE)
+  dataVencimento    DateTime
+  dataPagamento     DateTime?
+  proximoVencimento DateTime?
+  transacaoId       String?         // ID de transação do gateway de pagamento
+  dataCadastro      DateTime        @default(now())
+  dataAtualizacao   DateTime        @updatedAt
+  
+  // Relacionamentos
+  cliente           Cliente         @relation(fields: [clienteId], references: [id], onDelete: Cascade)
+  clientePlano      ClientePlano    @relation(fields: [clientePlanoId], references: [id], onDelete: Cascade)
+  notasFiscais      NotaFiscal[]
+  alertasEnviados   AlertaPagamento[]
+
+  @@map("pagamentos")
+}
+
+model NotaFiscal {
+  id                String           @id @default(uuid())
+  pagamentoId       String
+  numero            String           @unique
+  serie             String
+  chaveAcesso       String?
+  dataEmissao       DateTime         @default(now())
+  valor             Decimal          @db.Decimal(10, 2)
+  status            StatusNotaFiscal @default(PENDENTE)
+  xmlUrl            String?
+  pdfUrl            String?
+  dataCadastro      DateTime         @default(now())
+  dataAtualizacao   DateTime         @updatedAt
+  
+  // Relacionamentos
+  pagamento         Pagamento        @relation(fields: [pagamentoId], references: [id], onDelete: Cascade)
+
+  @@map("notas_fiscais")
+}
+
+model AlertaPagamento {
+  id                String           @id @default(uuid())
+  pagamentoId       String
+  tipoAlerta        String           // "15_DIAS", "7_DIAS", "3_DIAS", "VENCIDO", "BLOQUEIO_IMINENTE"
+  dataEnvio         DateTime         @default(now())
+  mensagem          String
+  enviado           Boolean          @default(false)
+  
+  // Relacionamentos
+  pagamento         Pagamento        @relation(fields: [pagamentoId], references: [id], onDelete: Cascade)
+
+  @@map("alertas_pagamento")
+}
+
+// Modelo para auditoria de ações administrativas
+model LogAdministrativo {
+  id                String        @id @default(uuid())
+  usuarioId         String        // ID do administrador que realizou a ação
+  acao              String        // Ex: "ALTERAR_PLANO", "BLOQUEAR_TENANT", etc.
+  entidade          String        // Ex: "TENANT", "CLIENTE", "PAGAMENTO"
+  entidadeId        String        // ID da entidade afetada
+  detalhes          Json          // Detalhes da alteração
+  dataAcao          DateTime      @default(now())
+  ip                String?
+
+  @@map("logs_administrativos")
+}
+
+
+
+//tenant
+
 model Tenant {
-  id           String       @id @default(uuid())
-  name         String
-  subdomain    String       @unique
-  status       TenantStatus @default(ACTIVE)
-  planId       String
-  plan         Plan         @relation(fields: [planId], references: [id])
-  createdAt    DateTime     @default(now()) @map("created_at")
-  updatedAt    DateTime     @updatedAt @map("updated_at")
-  userTenants  UserTenant[]
+  id                     String        @id @default(uuid())
+  clienteId              String        @unique
+  clientePlanoId         String        @unique
+  subdominio             String        @unique
+  status                 StatusTenant  @default(PENDENTE_CONFIGURACAO)
+  dataConfiguracao       DateTime?
+  dataUltimoAcesso       DateTime?
+  dataVencimentoAtual    DateTime?
+  dataBloqueioAcesso     DateTime?
+  bloqueioTotal          Boolean       @default(false)
+  dataCadastro           DateTime      @default(now())
+  dataAtualizacao        DateTime      @updatedAt
+  
+  // Relacionamentos
+  cliente                Cliente       @relation(fields: [clienteId], references: [id], onDelete: Cascade)
+  clientePlano           ClientePlano  @relation(fields: [clientePlanoId], references: [id], onDelete: Cascade)
+  configuracoes          TenantConfiguracao?
 
   @@map("tenants")
 }
 
-// Status possíveis para um tenant
-enum TenantStatus {
-  ACTIVE
-  SUSPENDED
-  INACTIVE
-  TRIAL
-}
+model TenantConfiguracao {
+  id                     String        @id @default(uuid())
+  tenantId               String        @unique
+  logoUrl                String?
+  corPrimaria            String?       // Formato hex: #RRGGBB
+  corSecundaria          String?
+  emailContato           String?
+  telefoneContato        String?
+  modulosAtivos          Json          // Array de strings com módulos ativos
+  dataCadastro           DateTime      @default(now())
+  dataAtualizacao        DateTime      @updatedAt
+  
+  // Relacionamentos
+  tenant                 Tenant        @relation(fields: [tenantId], references: [id], onDelete: Cascade)
 
-// Modelo de Usuário
-model User {
-  id            String       @id @default(uuid())
-  email         String       @unique
-  firstName     String       @map("first_name")
-  lastName      String       @map("last_name")
-  passwordHash  String       @map("password_hash")
-  status        UserStatus   @default(ACTIVE)
-  lastLogin     DateTime?    @map("last_login")
-  createdAt     DateTime     @default(now()) @map("created_at")
-  updatedAt     DateTime     @updatedAt @map("updated_at")
-  userTenants   UserTenant[]
-  userSessions  UserSession[]
-
-  @@map("users")
-}
-
-// Status possíveis para um usuário
-enum UserStatus {
-  ACTIVE
-  INACTIVE
-  BLOCKED
-}
-
-// Modelo de associação entre Usuários e Tenants
-model UserTenant {
-  id        String   @id @default(uuid())
-  userId    String   @map("user_id")
-  tenantId  String   @map("tenant_id")
-  roleId    String   @map("role_id")
-  createdAt DateTime @default(now()) @map("created_at")
-  updatedAt DateTime @updatedAt @map("updated_at")
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  tenant    Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  role      Role     @relation(fields: [roleId], references: [id])
-
-  @@unique([userId, tenantId])
-  @@map("user_tenants")
-}
-
-// Modelo de Sessão de Usuário
-model UserSession {
-  id          String    @id @default(uuid())
-  userId      String    @map("user_id")
-  tokenHash   String    @map("token_hash")
-  expiresAt   DateTime  @map("expires_at")
-  ipAddress   String?   @map("ip_address")
-  deviceInfo  String?   @map("device_info")
-  createdAt   DateTime  @default(now()) @map("created_at")
-  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  @@map("user_sessions")
-}
-
-// Modelo de Papéis (Roles)
-model Role {
-  id            String       @id @default(uuid())
-  name          String
-  description   String?
-  isSystemRole  Boolean      @default(false) @map("is_system_role")
-  permissions   Json?
-  createdAt     DateTime     @default(now()) @map("created_at")
-  updatedAt     DateTime     @updatedAt @map("updated_at")
-  userTenants   UserTenant[]
-
-  @@map("roles")
-}
-
-// Modelo de Planos
-model Plan {
-  id                String    @id @default(uuid())
-  name              String
-  maxProjects       Int       @map("max_projects")
-  maxUsers          Int       @map("max_users")
-  maxBeneficiaries  Int       @map("max_beneficiaries")
-  availableModules  Json      @map("available_modules")
-  price             Decimal   @db.Decimal(10, 2)
-  createdAt         DateTime  @default(now()) @map("created_at")
-  updatedAt         DateTime  @updatedAt @map("updated_at")
-  tenants           Tenant[]
-
-  @@map("plans")
+  @@map("tenant_configuracoes")
 }

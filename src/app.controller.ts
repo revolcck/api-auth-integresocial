@@ -10,7 +10,7 @@ export class AppController {
   healthCheck() {
     return {
       status: 'ok',
-      service: 'integre-auth',
+      service: 'integre-audit',
       timestamp: new Date().toISOString(),
     };
   }

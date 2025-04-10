@@ -2,6 +2,7 @@ import {
   Injectable,
   LoggerService as NestLoggerService,
   Scope,
+  Optional,
 } from '@nestjs/common';
 import { appConfig } from '../../config';
 
@@ -36,7 +37,7 @@ export class LoggerService implements NestLoggerService {
     silly: 6,
   };
 
-  constructor(context?: string) {
+  constructor(@Optional() context?: string) {
     this.context = context;
   }
 
